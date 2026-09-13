@@ -32,7 +32,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
       with:
-        repository: Coldwood1026/OptiScaler
+        repository: juye2005/OptiScaler
         path: .
         submodules: recursive
         
@@ -178,32 +178,6 @@ jobs:
           }
         }
       
-    - name: bygalacos - Download Latest fakenvapi
-      id: fakenvapi
-      shell: powershell
-      run: |
-        $release = Invoke-RestMethod "https://api.github.com/repos/optiscaler/fakenvapi/releases/latest"
-        "version=$($release.tag_name)" >> $env:GITHUB_OUTPUT
-        Write-Host "fakenvapi version output set: $($release.tag_name)"
-        $asset = $release.assets | Where-Object { $_.name -match "\.7z$" } | Select-Object -First 1
-
-        if (-not $asset) {
-        throw "No fakenvapi.7z asset found in latest release."
-        }
-
-        $out = "${{ github.workspace }}\fakenvapi.7z"
-
-        Write-Host "Downloading $($asset.name)"
-        Write-Host "Size: $([math]::Round($asset.size / 1MB, 2)) MB"
-
-        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $out
-
-        Write-Host "Extracting fakenvapi.7z"
-        7z x $out "-o${{ github.workspace }}\\x64\Release\a\OptiScaler" -y
-
-        if ($LASTEXITCODE -ne 0) {
-          throw "7z extraction failed with exit code $LASTEXITCODE"
-        }
       
     - name: bygalacos - Download Latest OptiPatcher
       id: optipatcher
@@ -224,104 +198,6 @@ jobs:
         Write-Host "Size: $([math]::Round($asset.size / 1MB, 2)) MB"
 
         Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $out
-      
-    - name: bygalacos - Download Latest NVIDIA Streamline SDK
-      id: streamline
-      shell: powershell
-      run: |
-        $release = Invoke-RestMethod "https://api.github.com/repos/NVIDIA-RTX/Streamline/releases/latest"
-        "version=$($release.tag_name)" >> $env:GITHUB_OUTPUT
-        Write-Host "NVIDIA Streamline SDK version output set: $($release.tag_name)"
-        $asset = $release.assets | Where-Object { $_.name -match "^streamline-sdk-v[0-9.]+\.zip$" } | Select-Object -First 1
-
-        if (-not $asset) {
-          throw "No streamline-sdk zip asset found in latest release."
-        }
-
-        $url = $asset.browser_download_url
-        $out = "${{ github.workspace }}\streamline-sdk.zip"
-
-        Write-Host "Downloading $($asset.name)"
-        Write-Host "Size: $([math]::Round($asset.size / 1MB, 2)) MB"
-
-        $request = [System.Net.HttpWebRequest]::Create($url)
-        $response = $request.GetResponse()
-        $totalBytes = $response.ContentLength
-
-        $stream = $response.GetResponseStream()
-        $file = [System.IO.File]::Create($out)
-
-        $buffer = New-Object byte[] 1048576
-        $totalRead = 0
-        $lastPrint = Get-Date
-        $startTime = Get-Date
-
-        try {
-          while (($read = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
-            $file.Write($buffer, 0, $read)
-            $totalRead += $read
-
-            $now = Get-Date
-            if (($now - $lastPrint).TotalSeconds -ge 2) {
-              $downloadedMb = [math]::Round($totalRead / 1MB, 2)
-              $totalMb = [math]::Round($totalBytes / 1MB, 2)
-              $percent = [math]::Round(($totalRead / $totalBytes) * 100, 2)
-              $speed = [math]::Round(($totalRead / 1MB) / (($now - $startTime).TotalSeconds), 2)
-
-              Write-Host "$downloadedMb MB / $totalMb MB ($percent%) - $speed MB/s"
-              $lastPrint = $now
-            }
-          }
-        }
-        finally {
-          $file.Close()
-          $stream.Close()
-          $response.Close()
-        }
-
-        Write-Host "Download completed: $([math]::Round($totalRead / 1MB, 2)) MB"
-
-        Write-Host "Extracting Streamline SDK..."
-        Expand-Archive "${{ github.workspace }}\streamline-sdk.zip" -DestinationPath "${{ github.workspace }}\streamline-sdk" -Force
-        Write-Host "Extraction completed."
-
-        Get-ChildItem "${{ github.workspace }}\streamline-sdk\bin\x64" -File -Filter "*.dll" |
-        ForEach-Object {
-          Write-Host "Copying $($_.Name)"
-          Copy-Item $_.FullName "${{ github.workspace }}\x64\Release\a\OptiScaler\streamline" -Force
-        }
-      
-    - name: bygalacos - Download Latest DLSS Enabler
-      id: dlssenabler
-      shell: powershell
-      run: |
-        $Files = Invoke-RestMethod "https://api.github.com/repos/${{ github.repository }}/contents/dlss-enabler"
-
-        $Versions = $Files |
-            Where-Object { $_.name -like "*.zip" } |
-            ForEach-Object {
-                if ($_.name -match 'DLSS Enabler (\d+(?:\.\d+){2,3})') {
-                    [PSCustomObject]@{
-                        Version = [version]$Matches[1]
-                        File    = $_.name
-                        Url     = $_.download_url
-                    }
-                }
-            } |
-            Sort-Object Version -Descending
-
-        $Versions | Format-Table @{Label="Available DLSS Enabler Versions In Repository";Expression={$_.File}}, Version -AutoSize
-
-        $LatestFile = $Versions | Select-Object -First 1
-        "version=$($LatestFile.Version)" >> $env:GITHUB_OUTPUT
-        Write-Host "DLSS Enabler version output set: $($LatestFile.Version)"
-
-        Write-Host "Downloading DLSS Enabler" "$($LatestFile.Version)"
-        Invoke-WebRequest -Uri $LatestFile.Url -OutFile "${{ github.workspace }}\dlss-enabler.zip"
-        Write-Host "Size: $([math]::Round((Get-Item "${{ github.workspace }}\dlss-enabler.zip").Length / 1MB, 2)) MB"
-        Write-Host "Extracting DLSS Enabler" "$($LatestFile.Version)"
-        Expand-Archive -Path "${{ github.workspace }}\dlss-enabler.zip" -DestinationPath "${{ github.workspace }}\x64\Release\a\OptiScaler" -Force
-        Rename-Item -Path "${{ github.workspace }}\x64\Release\a\OptiScaler\version.dll" -NewName "dlss-enabler-headless.dll"
       
     - name: bygalacos - Download Latest dlssg_to_fsr3
       id: dlssg_to_fsr3
