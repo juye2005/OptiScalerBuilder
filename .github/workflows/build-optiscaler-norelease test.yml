@@ -150,8 +150,7 @@ jobs:
       shell: powershell
       run: |
         @(
-          "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins",
-          "${{ github.workspace }}\x64\Release\a\OptiScaler\streamline"
+          "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins"
         ) | ForEach-Object {
           if (Test-Path $_) {
             Write-Host "Folder already exists: $($_)"
