@@ -176,7 +176,34 @@ jobs:
             Write-Host "Not found $($_)"
           }
         }
+        
+    - name: bygalacos - Download Latest fakenvapi
+      id: fakenvapi
+      shell: powershell
+      run: |
+        $release = Invoke-RestMethod "https://api.github.com/repos/optiscaler/fakenvapi/releases/latest"
+        "version=$($release.tag_name)" >> $env:GITHUB_OUTPUT
+        Write-Host "fakenvapi version output set: $($release.tag_name)"
+        $asset = $release.assets | Where-Object { $_.name -match "\.7z$" } | Select-Object -First 1
 
+        if (-not $asset) {
+        throw "No fakenvapi.7z asset found in latest release."
+        }
+
+        $out = "${{ github.workspace }}\fakenvapi.7z"
+
+        Write-Host "Downloading $($asset.name)"
+        Write-Host "Size: $([math]::Round($asset.size / 1MB, 2)) MB"
+
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $out
+
+        Write-Host "Extracting fakenvapi.7z"
+        7z x $out "-o${{ github.workspace }}\\x64\Release\a\OptiScaler" -y
+
+        if ($LASTEXITCODE -ne 0) {
+          throw "7z extraction failed with exit code $LASTEXITCODE"
+        }
+        
     - name: bygalacos - Download Latest OptiPatcher
       id: optipatcher
       shell: powershell
