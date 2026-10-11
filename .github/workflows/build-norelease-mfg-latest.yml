@@ -32,7 +32,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
       with:
-        repository: juye2005/OptiScaler
+        repository: optiscaler/OptiScaler
         path: .
         submodules: recursive
         
@@ -169,6 +169,21 @@ jobs:
 
         Write-Host "Extracting dlssg_to_fsr3" "$dlssg_to_fsr3_version"
         Expand-Archive -Path "${{ github.workspace }}\dlssg_to_fsr3_amd_is_better.zip" -DestinationPath "${{ github.workspace }}\x64\Release\a\OptiScaler" -Force
+
+    - name:  Download Latest xefgunlock_asi
+      id: xefgunlock
+      shell: powershell
+      run: |
+        $xefgunlock_asi_version = "20260918"
+        "version=$xefgunlock_asi_version" >> $env:GITHUB_OUTPUT
+        Write-Host "xefgunlock asi version output set: $xefgunlock_asi_version"
+
+        Write-Host "Downloading xefgunlock asi" "$xefgunlock_asi_version"
+        Invoke-WebRequest -Uri "https://raw.githubusercontent.com/juye2005/OptiScalerBuilder/forbuild/xefgunlock/xefgunlock.zip" -OutFile "${{ github.workspace }}\xefgunlock.zip"
+        Write-Host "Size: $([math]::Round((Get-Item "${{ github.workspace }}\xefgunlock.zip").Length / 1KB, 1)) KB"
+
+        Write-Host "Extracting xefgunlock asi" "$xefgunlock_asi_version"
+        Expand-Archive -Path "${{ github.workspace }}\xefgunlock.zip" -DestinationPath "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins" -Force
 
     - name: Compress the artifact
       run: |
