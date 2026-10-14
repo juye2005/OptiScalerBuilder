@@ -174,60 +174,40 @@ jobs:
       id: mfgunlocker	 
       shell: powershell
       run: |	  
-       #1. 配置目标仓库信息
        $owner = "dashdogy"
        $repo = "MFG-Unlocker"
        $apiUrl = "https://github.com"
        $extractPath = "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins"
        
-       Write-Host "正在请求 GitHub API 获取最新 Release 信息..."
+       Write-Host " GitHub API  Release "
        
-       # 2. 调用 GitHub API 获取最新 Release 详情（带 Token 避免限流）
+       
        $headers = @{ "Authorization" = "Bearer ${{ secrets.GITHUB_TOKEN }}" }
        $releaseInfo = Invoke-RestMethod -Uri $apiUrl -Headers $headers
        
-       # 3. 筛选出 .zip 格式的成品
        $asset = $releaseInfo.assets | Where-Object { $_.name -like "MFGUnlocker*.zip" } | Select-Object -First 1
-       
-       if ($null -eq $asset) {
-           Write-Error "未能在最新 Release 中找到 .zip 格式的成品文件！"
-           exit 1
-       }
        
        $downloadUrl = $asset.browser_download_url
        $fileName = $asset.name
        
-       Write-Host "成功定位最新版本: $($releaseInfo.tag_name)"
-       Write-Host "正在下载文件: $fileName"
+       Write-Host "version: $($releaseInfo.tag_name)"
+       Write-Host "downloading: $fileName"
        
-       # 4. 下载 Zip 压缩包
        Invoke-WebRequest -Uri $downloadUrl -OutFile "${{ github.workspace }}\$fileName"
        
-       # 5. 解压并转换后缀
        if (Test-Path $fileName) {
-           Write-Host "下载成功，正在解压到 $extractPath ..."
+           Write-Host "extracting $extractPath ..."
            Expand-Archive -Path "${{ github.workspace }}\$fileName" -DestinationPath $extractPath -Force
            
-           Write-Host "解压完成，正在将所有 .dll 文件后缀修改为 .asi ..."
-           
-           # 递归查找解压目录下的所有 .dll 文件
            $dllFiles = Get-ChildItem -Path $extractPath -Filter "*.dll" -Recurse
-           
-           if ($dllFiles.Count -eq 0) {
-               Write-Warning "未在解压后的文件夹中找到任何 .dll 文件！"
-           } else {
                foreach ($file in $dllFiles) {
-                   # 计算新文件名的完整路径（替换后缀为 .asi）
                    $newPath = [System.IO.Path]::ChangeExtension($file.FullName, ".asi")
                    
-                   Write-Host "正在重命名: $($file.FullName) -> $newPath"
+                   Write-Host "rename: $($file.FullName) -> $newPath"
                    Rename-Item -Path $file.FullName -NewName $newPath -Force
                }
-               Write-Host "后缀转换全部完成！"
-           }
-           
+               Write-Host "rename done！"		
        } else {
-           Write-Error "文件下载失败，未能找到已下载的压缩包！"
            exit 1
        }
 
