@@ -180,7 +180,6 @@ jobs:
         $apiUrl = "https://api.github.com/repos/$repo/releases/latest"
         $pluginPath = "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins"
         $zipPath = "${{ github.workspace }}\MFGUnlocker.zip"
-        $stagingPath = "${{ github.workspace }}\MFGUnlocker_Extracted"
 
         $headers = @{
           Accept = "application/vnd.github+json"
@@ -203,26 +202,17 @@ jobs:
           throw "No ZIP asset matching 'MFGUnlocker*.zip' was found in the latest release."
         }
 
-        New-Item -ItemType Directory -Path $pluginPath -Force | Out-Null
-        if (Test-Path $stagingPath) {
-          Remove-Item -Path $stagingPath -Recurse -Force
-        }
-        New-Item -ItemType Directory -Path $stagingPath -Force | Out-Null
-
         foreach ($asset in $assets) {
           Write-Host "Downloading: $($asset.name)"
           Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
 
-          $assetStagingPath = Join-Path $stagingPath ([System.IO.Path]::GetFileNameWithoutExtension($asset.name))
-          New-Item -ItemType Directory -Path $assetStagingPath -Force | Out-Null
-
           Write-Host "Extracting: $($asset.name)"
-          Expand-Archive -Path $zipPath -DestinationPath $assetStagingPath -Force
+          Expand-Archive -Path $zipPath -DestinationPath $pluginPath -Force
           Remove-Item -Path $zipPath -Force
         }
 
         $dllFiles = @(
-          Get-ChildItem -Path $stagingPath -Filter "*.dll" -File -Recurse
+          Get-ChildItem -Path $pluginPath -Filter "*.dll" -File -Recurse
         )
 
         if ($dllFiles.Count -eq 0) {
@@ -236,11 +226,6 @@ jobs:
 
           Write-Host "Renaming: $($file.FullName) -> $newName"
           Rename-Item -LiteralPath $file.FullName -NewName $newName -Force
-        }
-
-        # Copy only the extracted MFGUnlocker files into the plugins folder.
-        Get-ChildItem -Path $stagingPath -Force | ForEach-Object {
-          Copy-Item -LiteralPath $_.FullName -Destination $pluginPath -Recurse -Force
         }
 
         Write-Host "MFGUnlocker download, extraction, and DLL-to-ASI renaming completed."
