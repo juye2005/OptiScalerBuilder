@@ -170,46 +170,80 @@ jobs:
         Write-Host "Extracting dlssg_to_fsr3" "$dlssg_to_fsr3_version"
         Expand-Archive -Path "${{ github.workspace }}\dlssg_to_fsr3_amd_is_better.zip" -DestinationPath "${{ github.workspace }}\x64\Release\a\OptiScaler" -Force
 
-    - name: Download  Latest  MFGUnlocker
-      id: mfgunlocker	 
+    - name: Download Latest MFGUnlocker
+      id: mfgunlocker
       shell: powershell
-      run: |	  
-       $owner = "dashdogy"
-       $repo = "MFG-Unlocker"
-       $apiUrl = "https://github.com"
-       $extractPath = "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins"
-       
-       Write-Host " GitHub API  Release "
-       
-       
-       $headers = @{ "Authorization" = "Bearer ${{ secrets.GITHUB_TOKEN }}" }
-       $releaseInfo = Invoke-RestMethod -Uri $apiUrl -Headers $headers
-       
-       $asset = $releaseInfo.assets | Where-Object { $_.name -like "MFGUnlocker*.zip" } | Select-Object -First 1
-       
-       $downloadUrl = $asset.browser_download_url
-       $fileName = $asset.name
-       
-       Write-Host "version: $($releaseInfo.tag_name)"
-       Write-Host "downloading: $fileName"
-       
-       Invoke-WebRequest -Uri $downloadUrl -OutFile "${{ github.workspace }}\$fileName"
-       
-       if (Test-Path $fileName) {
-           Write-Host "extracting $extractPath ..."
-           Expand-Archive -Path "${{ github.workspace }}\$fileName" -DestinationPath $extractPath -Force
-           
-           $dllFiles = Get-ChildItem -Path $extractPath -Filter "*.dll" -Recurse
-               foreach ($file in $dllFiles) {
-                   $newPath = [System.IO.Path]::ChangeExtension($file.FullName, ".asi")
-                   
-                   Write-Host "rename: $($file.FullName) -> $newPath"
-                   Rename-Item -Path $file.FullName -NewName $newPath -Force
-               }
-               Write-Host "rename done！"		
-       } else {
-           exit 1
-       }
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        $repo = "dashdogy/MFG-Unlocker"
+        $apiUrl = "https://api.github.com/repos/$repo/releases/latest"
+        $pluginPath = "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins"
+        $zipPath = "${{ github.workspace }}\MFGUnlocker.zip"
+        $stagingPath = "${{ github.workspace }}\MFGUnlocker_Extracted"
+
+        $headers = @{
+          Accept = "application/vnd.github+json"
+          Authorization = "Bearer $env:GITHUB_TOKEN"
+          "X-GitHub-Api-Version" = "2022-11-28"
+        }
+
+        Write-Host "Fetching latest MFG-Unlocker release..."
+        $releaseInfo = Invoke-RestMethod -Uri $apiUrl -Headers $headers -Method Get
+
+        Write-Host "Release version: $($releaseInfo.tag_name)"
+
+        $assets = @(
+          $releaseInfo.assets | Where-Object {
+            $_.name -match '(?i)^MFGUnlocker.*\.zip$'
+          }
+        )
+
+        if ($assets.Count -eq 0) {
+          throw "No ZIP asset matching 'MFGUnlocker*.zip' was found in the latest release."
+        }
+
+        New-Item -ItemType Directory -Path $pluginPath -Force | Out-Null
+        if (Test-Path $stagingPath) {
+          Remove-Item -Path $stagingPath -Recurse -Force
+        }
+        New-Item -ItemType Directory -Path $stagingPath -Force | Out-Null
+
+        foreach ($asset in $assets) {
+          Write-Host "Downloading: $($asset.name)"
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
+
+          $assetStagingPath = Join-Path $stagingPath ([System.IO.Path]::GetFileNameWithoutExtension($asset.name))
+          New-Item -ItemType Directory -Path $assetStagingPath -Force | Out-Null
+
+          Write-Host "Extracting: $($asset.name)"
+          Expand-Archive -Path $zipPath -DestinationPath $assetStagingPath -Force
+          Remove-Item -Path $zipPath -Force
+        }
+
+        $dllFiles = @(
+          Get-ChildItem -Path $stagingPath -Filter "*.dll" -File -Recurse
+        )
+
+        if ($dllFiles.Count -eq 0) {
+          throw "No DLL files were found in the downloaded ZIP asset(s)."
+        }
+
+        foreach ($file in $dllFiles) {
+          $newName = [System.IO.Path]::GetFileName(
+            [System.IO.Path]::ChangeExtension($file.FullName, ".asi")
+          )
+
+          Write-Host "Renaming: $($file.FullName) -> $newName"
+          Rename-Item -LiteralPath $file.FullName -NewName $newName -Force
+        }
+
+        # Copy only the extracted MFGUnlocker files into the plugins folder.
+        Get-ChildItem -Path $stagingPath -Force | ForEach-Object {
+          Copy-Item -LiteralPath $_.FullName -Destination $pluginPath -Recurse -Force
+        }
+
+        Write-Host "MFGUnlocker download, extraction, and DLL-to-ASI renaming completed."
 
     - name: Compress the artifact
       run: |
