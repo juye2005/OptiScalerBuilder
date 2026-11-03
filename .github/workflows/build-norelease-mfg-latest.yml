@@ -116,10 +116,10 @@ jobs:
           else {
             Write-Host "Creating folder: $($_)"
           }
-
+        
           New-Item -ItemType Directory -Path $_ -Force | Out-Null
         }
-
+        
         @(
           "${{ github.workspace }}\x64\Release\a\Licenses",
           "${{ github.workspace }}\x64\Release\a\!! EXTRACT ALL FILES TO GAME FOLDER !!",
@@ -141,7 +141,7 @@ jobs:
       run: |
         $release = Invoke-RestMethod "https://api.github.com/repos/realdody/dlssg-to-xefg-xmx/releases/latest"
         "version=$($release.tag_name)" >> $env:GITHUB_OUTPUT
-        Write-Host "OptiPatcher version output set: $($release.tag_name)"
+        Write-Host "dlssg-to-xefg-xmx version output set: $($release.tag_name)"
         $asset = $release.assets | Where-Object { $_.name -match "\.zip$" } | Select-Object -First 1
 
         if (-not $asset) {
