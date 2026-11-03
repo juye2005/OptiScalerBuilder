@@ -134,7 +134,7 @@ jobs:
             Write-Host "Not found $($_)"
           }
         }
-		
+
     - name:  Download Latest dlssg-to-xefg-xmx
       id: dlssg-to-xefg-xmx
       shell: powershell
@@ -153,7 +153,6 @@ jobs:
         Write-Host "Size: $([math]::Round($asset.size / 1MB, 2)) MB"
 
         Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $out
-		
         Write-Host "Extracting $($asset.name)"
         Expand-Archive -Path $out -DestinationPath "${{ github.workspace }}\x64\Release\a\OptiScaler\custom" -Force
 
