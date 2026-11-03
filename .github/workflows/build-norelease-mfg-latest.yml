@@ -146,7 +146,8 @@ jobs:
 
         if (-not $asset) {
           throw "No dlssg-to-xefg ZIP was found in the latest release."
-
+        }
+        
         $out = "${{ github.workspace }}\dlssg-to-xefg.zip"
 
         Write-Host "Downloading $($asset.name)"
