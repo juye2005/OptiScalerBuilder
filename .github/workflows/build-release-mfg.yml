@@ -239,11 +239,13 @@ jobs:
 
         $match = [regex]::Match(
             $release.body,
-            '(?m)Build commit:\*\*\s*`([0-9a-f]{7})'
+            '(?im)Build commit:\s*(?:\[\s*)?`?([0-9a-f]{7})'
         )
         
         if (-not $match.Success) {
-          throw "Failed to find 7-digit Build commit SHA"
+            Write-Host "Release Notes content:"
+            Write-Host $release.body
+            throw "Failed to find 7-digit Build commit SHA"
         }
         
         $sha = $match.Groups[1].Value       
