@@ -237,6 +237,19 @@ jobs:
         Write-Host "OptiPatcher version output set: $($release.tag_name)"
         $asset = $release.assets | Where-Object { $_.name -match "\.asi$" } | Select-Object -First 1
 
+        $match = [regex]::Match(
+          $release.body,
+          '(?m)Build commit:\s*`?([0-9a-f]{7})'
+        )
+        
+        if (-not $match.Success) {
+          throw "Failed to find 7-digit Build commit SHA"
+        }
+        
+        $sha = $match.Groups[1].Value       
+        
+        Write-Host "Build commit: $sha"
+
         if (-not $asset) {
           throw "No OptiPatcher.asi asset found in rolling release."
         }
@@ -329,7 +342,7 @@ jobs:
           | Component | Version |
           |-----------|---------|
           | OptiScaler | ${{ steps.get_version.outputs.version }} - SHA: ${{ steps.get_version.outputs.sha }} |
-          | OptiPatcher | ${{ steps.optipatcher.outputs.version }} |
+          | OptiPatcher | ${{ steps.optipatcher.outputs.version }} - SHA: ${{ steps.optipatcher.outputs.sha }} |
           | dlssg_to_fsr3 | ${{ steps.dlssg_to_fsr3.outputs.version }} |
           | MFGUnlocker by dashdogy | ${{ steps.mfgunlocker.outputs.version }} |
           | dlssg-to-xefg-xmx by realdody | ${{ steps.dlssg-to-xefg-xmx.outputs.version }} |
