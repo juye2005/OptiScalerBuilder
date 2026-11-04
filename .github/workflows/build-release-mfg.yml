@@ -76,14 +76,19 @@ jobs:
         # Get the current date and time
         $date = Get-Date -Format "yyyyMMdd_HHmmss"
 
+        # Get OptiScaler short commit SHA
+        $sha = git rev-parse --short=8 HEAD
+
         # Construct the output filename with version and timestamp
         $outputFileName = "OptiScaler_${version}_${date}"
 
         # Output the generated filename
         Write-Output "Generated Filename: $outputFileName"
+        Write-Output "OptiScaler SHA: $sha"
 
         # Write outputs to GITHUB_OUTPUT
         "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        "sha=$sha" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
         "filename=$outputFileName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       continue-on-error: false
@@ -298,8 +303,8 @@ jobs:
           | OptiScaler | ${{ steps.get_version.outputs.version }} - SHA: ${{ steps.get_version.outputs.sha }} |
           | OptiPatcher | ${{ steps.optipatcher.outputs.version }} |
           | dlssg_to_fsr3 | ${{ steps.dlssg_to_fsr3.outputs.version }} |
-          | MFGUnlocker | ${{ steps.mfgunlocker.outputs.version }} |
-          | dlssg-to-xefg-xmx | ${{ steps.dlssg-to-xefg-xmx.outputs.version }} |
+          | MFGUnlocker by dashdogy | ${{ steps.mfgunlocker.outputs.version }} |
+          | dlssg-to-xefg-xmx by realdody | ${{ steps.dlssg-to-xefg-xmx.outputs.version }} |
           | libxess_fg | ${{ steps.libxess_fg.outputs.version }} |
 
           Build Package:
