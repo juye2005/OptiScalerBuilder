@@ -121,7 +121,7 @@ jobs:
           else {
             Write-Host "Creating folder: $($_)"
           }
-        
+
           New-Item -ItemType Directory -Path $_ -Force | Out-Null
         }
         
@@ -139,6 +139,72 @@ jobs:
             Write-Host "Not found $($_)"
           }
         }
+
+    #- name: Download Latest NVIDIA Streamline SDK
+    #  id: streamline
+    #  shell: powershell
+    #  run: |
+    #    $release = Invoke-RestMethod "https://api.github.com/repos/NVIDIA-RTX/Streamline/releases/latest"
+    #    "version=$($release.tag_name)" >> $env:GITHUB_OUTPUT
+    #    Write-Host "NVIDIA Streamline SDK version output set: $($release.tag_name)"
+    #    $asset = $release.assets | Where-Object { $_.name -match "^streamline-sdk-v[0-9.]+\.zip$" } | Select-Object -First 1
+    #
+    #    if (-not $asset) {
+    #      throw "No streamline-sdk zip asset found in latest release."
+    #    }
+    #
+    #    $url = $asset.browser_download_url
+    #    $out = "${{ github.workspace }}\streamline-sdk.zip"
+    #
+    #    Write-Host "Downloading $($asset.name)"
+    #    Write-Host "Size: $([math]::Round($asset.size / 1MB, 2)) MB"
+    #
+    #    $request = [System.Net.HttpWebRequest]::Create($url)
+    #    $response = $request.GetResponse()
+    #    $totalBytes = $response.ContentLength
+    #
+    #    $stream = $response.GetResponseStream()
+    #    $file = [System.IO.File]::Create($out)
+    #
+    #    $buffer = New-Object byte[] 1048576
+    #    $totalRead = 0
+    #    $lastPrint = Get-Date
+    #    $startTime = Get-Date
+    #
+    #    try {
+    #      while (($read = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+    #        $file.Write($buffer, 0, $read)
+    #        $totalRead += $read
+    #
+    #        $now = Get-Date
+    #        if (($now - $lastPrint).TotalSeconds -ge 2) {
+    #          $downloadedMb = [math]::Round($totalRead / 1MB, 2)
+    #          $totalMb = [math]::Round($totalBytes / 1MB, 2)
+    #          $percent = [math]::Round(($totalRead / $totalBytes) * 100, 2)
+    #          $speed = [math]::Round(($totalRead / 1MB) / (($now - $startTime).TotalSeconds), 2)
+    #
+    #          Write-Host "$downloadedMb MB / $totalMb MB ($percent%) - $speed MB/s"
+    #          $lastPrint = $now
+    #        }
+    #      }
+    #    }
+    #    finally {
+    #      $file.Close()
+    #      $stream.Close()
+    #      $response.Close()
+    #    }
+    #
+    #    Write-Host "Download completed: $([math]::Round($totalRead / 1MB, 2)) MB"
+    #
+    #    Write-Host "Extracting Streamline SDK..."
+    #    Expand-Archive "${{ github.workspace }}\streamline-sdk.zip" -DestinationPath "${{ github.workspace }}\streamline-sdk" -Force
+    #    Write-Host "Extraction completed."
+    #
+    #    Get-ChildItem "${{ github.workspace }}\streamline-sdk\bin\x64" -File -Filter "*.dll" |
+    #    ForEach-Object {
+    #      Write-Host "Copying $($_.Name)"
+    #      Copy-Item $_.FullName "${{ github.workspace }}\x64\Release\a\OptiScaler\streamline" -Force
+    #    }
 
     - name:  Download Latest dlssg-to-xefg-xmx
       id: dlssg-to-xefg-xmx
@@ -218,62 +284,24 @@ jobs:
     - name: Download Latest MFGUnlocker
       id: mfgunlocker
       shell: powershell
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        $repo = "dashdogy/MFG-Unlocker"
-        $apiUrl = "https://api.github.com/repos/$repo/releases/latest"
-        $pluginPath = "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins"
-        $zipPath = "${{ github.workspace }}\MFGUnlocker.zip"
+        $release = Invoke-RestMethod "https://api.github.com/repos/dashdogy/MFG-Unlocker/releases/latest"
+        "version=$($release.tag_name)" >> $env:GITHUB_OUTPUT
+        Write-Host "MFGUnlocker version output set: $($release.tag_name)"
+        $asset = $release.assets | Where-Object { $_.name -match "\.zip$" } | Select-Object -First 1
 
-        $headers = @{
-          Accept = "application/vnd.github+json"
-          Authorization = "Bearer $env:GITHUB_TOKEN"
-          "X-GitHub-Api-Version" = "2022-11-28"
+        if (-not $asset) {
+          throw "No MFGUnlocker ZIP was found in the latest release."
         }
+        
+        $out = "${{ github.workspace }}\MFGUnlocker.zip"
 
-        Write-Host "Fetching latest MFG-Unlocker release..."
-        $releaseInfo = Invoke-RestMethod -Uri $apiUrl -Headers $headers -Method Get
+        Write-Host "Downloading $($asset.name)"
+        Write-Host "Size: $([math]::Round($asset.size / 1MB, 2)) MB"
 
-        Write-Host "Release version: $($releaseInfo.tag_name)"
-
-        $assets = @(
-          $releaseInfo.assets | Where-Object {
-            $_.name -match '(?i)^MFGUnlocker.*\.zip$'
-          }
-        )
-
-        if ($assets.Count -eq 0) {
-          throw "No ZIP asset matching 'MFGUnlocker*.zip' was found in the latest release."
-        }
-
-        foreach ($asset in $assets) {
-          Write-Host "Downloading: $($asset.name)"
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
-
-          Write-Host "Extracting: $($asset.name)"
-          Expand-Archive -Path $zipPath -DestinationPath $pluginPath -Force
-          Remove-Item -Path $zipPath -Force
-        }
-
-        $dllFiles = @(
-          Get-ChildItem -Path $pluginPath -Filter "*.dll" -File -Recurse
-        )
-
-        if ($dllFiles.Count -eq 0) {
-          throw "No DLL files were found in the downloaded ZIP asset(s)."
-        }
-
-        foreach ($file in $dllFiles) {
-          $newName = [System.IO.Path]::GetFileName(
-            [System.IO.Path]::ChangeExtension($file.FullName, ".asi")
-          )
-
-          Write-Host "Renaming: $($file.FullName) -> $newName"
-          Rename-Item -LiteralPath $file.FullName -NewName $newName -Force
-        }
-
-        Write-Host "MFGUnlocker download, extraction, and DLL-to-ASI renaming completed."
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $out
+        Write-Host "Extracting $($asset.name)"
+        Expand-Archive -Path $out -DestinationPath "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins" -Force
 
     - name: Compress the artifact
       run: |
