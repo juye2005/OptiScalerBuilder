@@ -249,7 +249,7 @@ jobs:
         }
         
         $sha = $match.Groups[1].Value       
-        
+        "sha=$sha" >> $env:GITHUB_OUTPUT
         Write-Host "Build commit: $sha"
 
         if (-not $asset) {
