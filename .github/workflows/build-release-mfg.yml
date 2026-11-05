@@ -304,6 +304,7 @@ jobs:
         "version=$($release.tag_name)" >> $env:GITHUB_OUTPUT
         Write-Host "MFGUnlocker version output set: $($release.tag_name)"
         $asset = $release.assets | Where-Object { $_.name -match "\.zip$" } | Select-Object -First 1
+        $pluginPath = "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins"
 
         if (-not $asset) {
           throw "No MFGUnlocker ZIP was found in the latest release."
@@ -316,7 +317,26 @@ jobs:
 
         Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $out
         Write-Host "Extracting $($asset.name)"
-        Expand-Archive -Path $out -DestinationPath "${{ github.workspace }}\x64\Release\a\OptiScaler\plugins" -Force
+        Expand-Archive -Path $out -DestinationPath $pluginPath -Force
+
+        $dllFiles = @(
+          Get-ChildItem -Path $pluginPath -Filter "*.dll" -File -Recurse
+        )
+
+        if ($dllFiles.Count -eq 0) {
+          throw "No DLL files were found in the downloaded ZIP asset(s)."
+        }
+
+        foreach ($file in $dllFiles) {
+          $newName = [System.IO.Path]::GetFileName(
+            [System.IO.Path]::ChangeExtension($file.FullName, ".asi")
+          )
+
+          Write-Host "Renaming: $($file.FullName) -> $newName"
+          Rename-Item -LiteralPath $file.FullName -NewName $newName -Force
+        }
+
+        Write-Host "MFGUnlocker download, extraction, and DLL-to-ASI renaming completed."
 
     - name: Compress the artifact
       run: |
