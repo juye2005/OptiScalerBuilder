@@ -237,20 +237,20 @@ jobs:
         Write-Host "OptiPatcher version output set: $($release.tag_name)"
         $asset = $release.assets | Where-Object { $_.name -match "\.asi$" } | Select-Object -First 1
 
-        $match = [regex]::Match(
-            $release.body,
-            'Build commit:\*\*\s*([0-9a-f]{7})'
-        )
-        
-        if (-not $match.Success) {
-            Write-Host "Release Notes:"
-            Write-Host $release.body
-            throw "Failed to find Build commit SHA"
-        }
-        
-        $sha = $match.Groups[1].Value       
-        "sha=$sha" >> $env:GITHUB_OUTPUT
-        Write-Host "Build commit: $sha"
+#        $match = [regex]::Match(
+#            $release.body,
+#            'Build commit:\*\*\s*([0-9a-f]{7})'
+#        )
+#        
+#        if (-not $match.Success) {
+#            Write-Host "Release Notes:"
+#            Write-Host $release.body
+#            throw "Failed to find Build commit SHA"
+#        }
+#        
+#        $sha = $match.Groups[1].Value       
+#        "sha=$sha" >> $env:GITHUB_OUTPUT
+#        Write-Host "Build commit: $sha"
 
         if (-not $asset) {
           throw "No OptiPatcher.asi asset found in rolling release."
