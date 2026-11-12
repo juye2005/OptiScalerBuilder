@@ -206,27 +206,27 @@ jobs:
     #      Copy-Item $_.FullName "${{ github.workspace }}\x64\Release\a\OptiScaler\streamline" -Force
     #    }
 
-    - name:  Download Latest dlssg-to-xefg-xmx
-      id: dlssg-to-xefg-xmx
-      shell: powershell
-      run: |
-        $release = Invoke-RestMethod "https://api.github.com/repos/realdody/dlssg-to-xefg-xmx/releases/latest"
-        "version=$($release.tag_name)" >> $env:GITHUB_OUTPUT
-        Write-Host "dlssg-to-xefg-xmx version output set: $($release.tag_name)"
-        $asset = $release.assets | Where-Object { $_.name -match "\.zip$" } | Select-Object -First 1
-
-        if (-not $asset) {
-          throw "No dlssg-to-xefg ZIP was found in the latest release."
-        }
-        
-        $out = "${{ github.workspace }}\dlssg-to-xefg.zip"
-
-        Write-Host "Downloading $($asset.name)"
-        Write-Host "Size: $([math]::Round($asset.size / 1MB, 2)) MB"
-
-        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $out
-        Write-Host "Extracting $($asset.name)"
-        Expand-Archive -Path $out -DestinationPath "${{ github.workspace }}\x64\Release\a\OptiScaler\custom" -Force
+#    - name:  Download Latest dlssg-to-xefg-xmx
+#      id: dlssg-to-xefg-xmx
+#      shell: powershell
+#      run: |
+#        $release = Invoke-RestMethod "https://api.github.com/repos/realdody/dlssg-to-xefg-xmx/releases/latest"
+#        "version=$($release.tag_name)" >> $env:GITHUB_OUTPUT
+#        Write-Host "dlssg-to-xefg-xmx version output set: $($release.tag_name)"
+#        $asset = $release.assets | Where-Object { $_.name -match "\.zip$" } | Select-Object -First 1
+#
+#        if (-not $asset) {
+#          throw "No dlssg-to-xefg ZIP was found in the latest release."
+#        }
+#        
+#        $out = "${{ github.workspace }}\dlssg-to-xefg.zip"
+#
+#        Write-Host "Downloading $($asset.name)"
+#        Write-Host "Size: $([math]::Round($asset.size / 1MB, 2)) MB"
+#
+#        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $out
+#        Write-Host "Extracting $($asset.name)"
+#        Expand-Archive -Path $out -DestinationPath "${{ github.workspace }}\x64\Release\a\OptiScaler\custom" -Force
 
     - name:  Download Latest OptiPatcher
       id: optipatcher
@@ -352,7 +352,6 @@ jobs:
           | OptiPatcher | ${{ steps.optipatcher.outputs.version }} - SHA: ${{ steps.optipatcher.outputs.sha }} |
           | dlssg_to_fsr3 | ${{ steps.dlssg_to_fsr3.outputs.version }} |
           | MFGUnlocker by dashdogy | ${{ steps.mfgunlocker.outputs.version }} |
-          | dlssg-to-xefg-xmx by realdody | ${{ steps.dlssg-to-xefg-xmx.outputs.version }} |
           | libxess_fg | ${{ steps.libxess_fg.outputs.version }} |
 
           Build Package:
