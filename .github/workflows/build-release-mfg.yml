@@ -74,13 +74,13 @@ jobs:
         $version = "v$majorVersion.$minorVersion.$hotfixVersion-pre$buildVersion"
 
         # Get the current date and time
-        $date = Get-Date -Format "yyyyMMdd_HHmmss"
+        $date = Get-Date -Format "yyyyMMdd"
 
         # Get OptiScaler short commit SHA
         $sha = git rev-parse --short=8 HEAD
 
         # Construct the output filename with version and timestamp
-        $outputFileName = "OptiScaler_${version}_${date}"
+        $outputFileName = "OptiScaler_${version}_${date}_${sha}"
 
         # Output the generated filename
         Write-Output "Generated Filename: $outputFileName"
